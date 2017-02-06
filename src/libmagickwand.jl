@@ -354,7 +354,7 @@ end
 
 # set the compression
 function setimagecompression(wand::MagickWand, compression::Integer)
-    status = ccall((:MagickSetImageCompression, libwand), Cint, (Ptr{Void},Cint), wand.ptr, int32(compression))
+    status = ccall((:MagickSetImageCompression, libwand), Cint, (Ptr{Void},Cint), wand.ptr, Int32(compression))
     status == 0 && error(wand)
     nothing
 end
