@@ -25,6 +25,14 @@ else
     error("ImageMagick not properly installed. Please run Pkg.build(\"ImageMagick\") then restart Julia.")
 end
 
+function magick_get_libversion(libwand)
+    sym = Libdl.dlsym_e(Libdl.dlopen(libwand, Libdl.RTLD_LAZY), :MagickQueryConfigureOption)
+    p = ccall(sym, Ptr{UInt8}, (Ptr{UInt8},), "LIB_VERSION_NUMBER")
+    p != C_NULL || error("Error obtaining ImageMagick library version.")
+    VersionNumber(join(split(unsafe_string(p), ',')[1:3], '.'))
+end
+const libversion = magick_get_libversion(libwand)
+
 const libmagick = Ref{Ptr{Void}}()
 
 const MagickWandGenesis                = Ref{Ptr{Void}}()
@@ -132,8 +140,6 @@ function __init__()
     MagickQueryConfigureOption[]       = loadsym(:MagickQueryConfigureOption)
 
     magickgenesis()
-
-    global libversion = getlibversion()
 end
 
 # Constants
