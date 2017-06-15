@@ -21,8 +21,6 @@ end
 
 
 if is_linux()
-    provides(AptGet, "libmagickwand4", libwand)
-    provides(AptGet, "libmagickwand5", libwand)
     provides(AptGet, "libmagickwand-6.q16-2", libwand)
     provides(Pacman, "imagemagick", libwand)
     provides(Yum, "ImageMagick", libwand)
