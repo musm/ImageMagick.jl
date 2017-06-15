@@ -2,6 +2,17 @@ using BinDeps
 
 @BinDeps.setup
 
+const MAX_VERSION = v"7.0-"
+const MIN_VERSION = v"6.9-"
+function magick_get_libversion(lib, handle)
+    sym = Libdl.dlsym_e(handle, :MagickQueryConfigureOption)
+    p = ccall(sym, Ptr{UInt8}, (Ptr{UInt8},), "LIB_VERSION_NUMBER")
+    p != C_NULL || error("Error obtaining ImageMagick library version.")
+    VersionNumber(join(split(unsafe_string(p), ',')[1:3], '.'))
+end
+compatible_version(lib, handle) = MIN_VERSION < magick_get_libversion(lib, handle) < MAX_VERSION
+
+
 libnames    = ["libMagickWand", "CORE_RL_wand_"]
 suffixes    = ["", "-Q16", "-6.Q16", "-Q8"]
 options     = ["", "HDRI"]
@@ -10,7 +21,7 @@ aliases     = vec(libnames .*
                   reshape(suffixes, (1, length(suffixes))) .*
                   reshape(options, (1, 1, length(options))) .*
                   reshape(extensions, (1, 1, 1, length(extensions))))
-libwand     = library_dependency("libwand", aliases = aliases)
+libwand     = library_dependency("libwand", aliases = aliases, validate = compatible_version)
 
 
 mpath = get(ENV, "MAGICK_HOME", "") # If MAGICK_HOME is defined, add to library search path
@@ -21,11 +32,29 @@ end
 
 
 if is_linux()
-    provides(AptGet, "libmagickwand4", libwand)
-    provides(AptGet, "libmagickwand5", libwand)
-    provides(AptGet, "libmagickwand-6.q16-2", libwand)
-    provides(Pacman, "imagemagick", libwand)
-    provides(Yum, "ImageMagick", libwand)
+    # provides(AptGet, "libmagickwand4", libwand)
+    # provides(AptGet, "libmagickwand5", libwand)
+    # provides(AptGet, "libmagickwand-6.q16-2", libwand)
+    # provides(Pacman, "imagemagick", libwand)
+    # provides(Yum, "ImageMagick", libwand)
+
+    version = "6.9.8-10"
+    provides(Sources, URI("https://www.imagemagick.org/download/ImageMagick-6.9.8-10.tar.gz"), libwand, unpacked_dir="libwand-$version")
+
+    provides(BuildProcess,
+        (@build_steps begin
+            GetSources(libwand)
+            CreateDirectory(BinDeps.builddir(libwand))
+
+            @build_steps begin
+                ChangeDirectory(BinDeps.builddir(libwand))
+                DirectoryRule(BinDeps.libdir(libwand),
+                    @build_steps begin
+                    `$(joinpath(srcdir(libwand), "fftw-$FFTW_VER", "configure")) $general_config $fftw_config`
+                    `$MAKE_CMD`              
+            end)
+        end),
+        libwand, os = :Linux)
 end
 
 
